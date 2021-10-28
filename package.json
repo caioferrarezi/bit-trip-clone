@@ -1,0 +1,21 @@
+{
+  "name": "bittrip-platform-clone",
+  "version": "0.1.0",
+  "description": "A Bit Trip Runner warp zone game clone from Super Meat Boy (Only for education purpose)",
+  "main": "index.js",
+  "scripts": {
+    "serve": "webpack serve --env NODE_ENV=development"
+  },
+  "author": "Caio Ferrarezi",
+  "license": "MIT",
+  "devDependencies": {
+    "clean-webpack-plugin": "^4.0.0",
+    "html-webpack-plugin": "^5.5.0",
+    "webpack": "^5.60.0",
+    "webpack-cli": "^4.9.1",
+    "webpack-dev-server": "^4.3.1"
+  },
+  "dependencies": {
+    "frame-draft": "^0.1.2"
+  }
+}
