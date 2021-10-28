@@ -15,14 +15,14 @@ const MAP = createMap`
   #####......................#####
   #####......................#####
   #####......................#####
-  ##################ˆˆ.......#####
+  #############ˆˆˆˆˆˆˆ.......#####
   ####################.......#####
   #####......................#####
   #####......................#####
   #####......................#####
   #####......................#####
-  #####......................#####
-  ################################
+  #####.$....................#####
+  #####################ˆˆˆˆˆˆ#####
   ################################
   ################################
 `
@@ -45,11 +45,13 @@ let playerVelocityY = 0
 let playerPositionX = 70
 let playerPositionY = 60
 
+let playerJumpCount = 0
 let isPlayerDead = false
-let isPlayerJumping = false
 
 let gravity = 0
 let gravitySpeed = 0
+
+let accumulatedTime = 0
 
 const getTile = (x, y) => {
   x = Math.floor(x / SIZE)
@@ -66,74 +68,94 @@ const update = elapsedTime => {
   if (isPlayerDead) return
 
   if (keyboard.isDown('ArrowLeft')) {
-    playerVelocityX = -3
+    playerVelocityX = playerJumpCount ? -3 : -3
   }
 
   if (keyboard.isDown('ArrowRight')) {
-    playerVelocityX = 3
+    playerVelocityX = playerJumpCount ? 3 : 3
   }
 
   if (keyboard.isHeld('Space')) {
-    if (!isPlayerJumping) {
-      isPlayerJumping = true
-      gravity = -2
+    if (playerJumpCount === 0) {
+      gravity = -1.5
     }
+
+    playerJumpCount = Math.min(playerJumpCount + 1, 2)
   } else {
     gravity = 0.2
   }
 
   gravitySpeed += gravity
+
+  if (keyboard.isDown('Space')) {
+    if (
+      playerJumpCount === 2 &&
+      accumulatedTime < 500
+    ) {
+      accumulatedTime += elapsedTime
+      gravitySpeed = Math.min(gravitySpeed, 0.01)
+    }
+  }
+
+  gravitySpeed = Math.min(gravitySpeed, 2)
+
   playerVelocityY += gravitySpeed
 
   let playerNewPositionX = playerPositionX + round(playerVelocityX)
   let playerNewPositionY = playerPositionY + round(playerVelocityY)
 
-  let firstTile, lastTile
+  let topTile, bottomTile
 
   if (playerVelocityX < 0) { // Left
-    firstTile = getTile(playerNewPositionX, playerPositionY)
-    lastTile = getTile(playerNewPositionX, playerPositionY + SIZE)
+    topTile = getTile(playerNewPositionX, playerPositionY)
+    bottomTile = getTile(playerNewPositionX, playerPositionY + SIZE)
 
-    if (firstTile !== '.' || lastTile !== '.') {
+    if (topTile !== '.' || bottomTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) + SIZE
       playerVelocityX = 0
     }
   } else { // Right
-    firstTile = getTile(playerNewPositionX + SIZE, playerPositionY)
-    lastTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE)
+    topTile = getTile(playerNewPositionX + SIZE, playerPositionY)
+    bottomTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE)
 
-    if (firstTile !== '.' || lastTile !== '.') {
+    if (topTile !== '.' || bottomTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) - 0.01
       playerVelocityX = 0
     }
   }
 
-  if (playerVelocityY < 0) { // Up
-    firstTile = getTile(playerPositionX, playerNewPositionY)
-    lastTile = getTile(playerPositionX + SIZE, playerNewPositionY)
+  let leftTile, rightTile
 
-    if (firstTile !== '.' || lastTile !== '.') {
+  if (playerVelocityY < 0) { // Up
+    leftTile = getTile(playerPositionX, playerNewPositionY)
+    rightTile = getTile(playerPositionX + SIZE, playerNewPositionY)
+
+    if (leftTile !== '.' || rightTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) + SIZE
       playerVelocityY = 0
     }
   } else { // Down
-    firstTile = getTile(playerPositionX, playerNewPositionY + SIZE)
-    lastTile = getTile(playerPositionX + SIZE, playerNewPositionY + SIZE)
+    leftTile = getTile(playerPositionX, playerNewPositionY + SIZE)
+    rightTile = getTile(playerPositionX + SIZE, playerNewPositionY + SIZE)
 
-    if (firstTile !== '.' || lastTile !== '.') {
+    if (leftTile !== '.' || rightTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) - 0.01
       playerVelocityY = 0
 
-      isPlayerJumping = false
+      playerJumpCount = 0
       gravitySpeed = 0
+      accumulatedTime = 0
     }
   }
 
-  if (firstTile === 'ˆ' || lastTile === 'ˆ') {
+  if (
+    ['ˆ', 'v'].includes(leftTile) ||
+    ['ˆ', 'v'].includes(rightTile)
+  ) {
     isPlayerDead = true
   }
 
-  playerVelocityX *= 0.82
+  playerVelocityX *= 0.9
   playerVelocityY *= 0.82
 
   playerPositionX = playerNewPositionX
@@ -159,6 +181,10 @@ const render = () => {
 
         canvas.context.fillStyle = '#ff0000'
         canvas.context.fillRect(x, y, SIZE, SIZE / 2)
+        break;
+      case '$':
+        canvas.context.fillStyle = '#ff33ff'
+        canvas.context.fillRect(x, y, SIZE, SIZE)
         break;
     }
   }
