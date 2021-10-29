@@ -7,27 +7,27 @@ import {
 import { createMap } from './helpers/create-map'
 
 const MAP = createMap`
-  ################################
-  ################################
-  ################################
-  #####......................#####
-  #####......................#####
-  #####......................#####
-  #####......................#####
-  #####......................#####
-  #############ˆˆˆˆˆˆˆ.......#####
-  ####################.......#####
-  #####......................#####
-  #####......................#####
-  #####......................#####
-  #####......................#####
-  #####.$....................#####
-  #####################ˆˆˆˆˆˆ#####
-  ################################
-  ################################
+  ##################################
+  ##################################
+  ##################################
+  ####............vvvvvv........####
+  ####..........................####
+  ####..........................####
+  ####..........................####
+  ####............^^^^^^........####
+  #########################.....####
+  #########################.....####
+  ####..........................####
+  ####..........................####
+  ####..........................####
+  ####..........................####
+  ####.$..................^^^^^^####
+  ##################################
+  ##################################
+  ##################################
 `
 
-const COLUMNS = 32
+const COLUMNS = 34
 const ROWS = 18
 
 const SIZE = 12
@@ -42,10 +42,11 @@ const keyboard = new Keyboard()
 let playerVelocityX = 0
 let playerVelocityY = 0
 
-let playerPositionX = 70
+let playerPositionX = 60
 let playerPositionY = 60
 
 let playerJumpCount = 0
+let isPlayerOnTheGround = false
 let isPlayerDead = false
 
 let gravity = 0
@@ -76,11 +77,15 @@ const update = elapsedTime => {
   }
 
   if (keyboard.isHeld('Space')) {
-    if (playerJumpCount === 0) {
+    const shouldJump = isPlayerOnTheGround && playerJumpCount === 0
+
+    if (shouldJump) {
       gravity = -1.5
     }
 
-    playerJumpCount = Math.min(playerJumpCount + 1, 2)
+    if (playerJumpCount > 0 || shouldJump) {
+      playerJumpCount = Math.min(playerJumpCount + 1, 2)
+    }
   } else {
     gravity = 0.2
   }
@@ -89,74 +94,92 @@ const update = elapsedTime => {
 
   if (keyboard.isDown('Space')) {
     if (
-      playerJumpCount === 2 &&
-      accumulatedTime < 500
+      playerJumpCount === 1 &&
+      accumulatedTime < 800
     ) {
       accumulatedTime += elapsedTime
-      gravitySpeed = Math.min(gravitySpeed, 0.01)
+      gravitySpeed = Math.min(gravitySpeed, -0.2)
+    }
+
+    if (
+      playerJumpCount === 2 &&
+      accumulatedTime < 800
+    ) {
+      accumulatedTime += elapsedTime
+      gravitySpeed = 0
     }
   }
 
-  gravitySpeed = Math.min(gravitySpeed, 2)
+  gravitySpeed = Math.min(gravitySpeed, 1.2)
 
   playerVelocityY += gravitySpeed
 
   let playerNewPositionX = playerPositionX + round(playerVelocityX)
   let playerNewPositionY = playerPositionY + round(playerVelocityY)
 
-  let topTile, bottomTile
+  let topLeftTile, topRightTile, bottomLeftTile, bottomRightTile
 
   if (playerVelocityX < 0) { // Left
-    topTile = getTile(playerNewPositionX, playerPositionY)
-    bottomTile = getTile(playerNewPositionX, playerPositionY + SIZE)
+    topLeftTile = getTile(playerNewPositionX, playerPositionY)
+    bottomLeftTile = getTile(playerNewPositionX, playerPositionY + SIZE)
 
-    if (topTile !== '.' || bottomTile !== '.') {
+    if (topLeftTile !== '.' || bottomLeftTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) + SIZE
       playerVelocityX = 0
     }
-  } else { // Right
-    topTile = getTile(playerNewPositionX + SIZE, playerPositionY)
-    bottomTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE)
 
-    if (topTile !== '.' || bottomTile !== '.') {
+    if (['^', 'v'].includes(topLeftTile) || ['^', 'v'].includes(bottomLeftTile)) {
+      isPlayerDead = true
+    }
+  } else { // Right
+    topRightTile = getTile(playerNewPositionX + SIZE, playerPositionY)
+    bottomRightTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE - 1)
+
+    if (topRightTile !== '.' || bottomRightTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) - 0.01
       playerVelocityX = 0
     }
+
+    if (['^', 'v'].includes(topRightTile) || ['^', 'v'].includes(bottomRightTile)) {
+      isPlayerDead = true
+    }
   }
 
-  let leftTile, rightTile
-
   if (playerVelocityY < 0) { // Up
-    leftTile = getTile(playerPositionX, playerNewPositionY)
-    rightTile = getTile(playerPositionX + SIZE, playerNewPositionY)
+    topLeftTile = getTile(playerPositionX + 1, playerNewPositionY)
+    topRightTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY)
 
-    if (leftTile !== '.' || rightTile !== '.') {
+    if (topLeftTile !== '.' || topRightTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) + SIZE
       playerVelocityY = 0
     }
-  } else { // Down
-    leftTile = getTile(playerPositionX, playerNewPositionY + SIZE)
-    rightTile = getTile(playerPositionX + SIZE, playerNewPositionY + SIZE)
 
-    if (leftTile !== '.' || rightTile !== '.') {
+    if (topLeftTile === 'v' || topRightTile === 'v') {
+      isPlayerDead = true
+    }
+  } else { // Down
+    bottomLeftTile = getTile(playerPositionX + 1, playerNewPositionY + SIZE)
+    bottomRightTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY + SIZE)
+
+    if (bottomLeftTile !== '.' || bottomRightTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) - 0.01
       playerVelocityY = 0
 
       playerJumpCount = 0
       gravitySpeed = 0
       accumulatedTime = 0
+      isPlayerOnTheGround = true
+    } else {
+      isPlayerOnTheGround = false
+    }
+
+    if (bottomLeftTile === '^' || bottomRightTile === '^') {
+      isPlayerDead = true
     }
   }
 
-  if (
-    ['ˆ', 'v'].includes(leftTile) ||
-    ['ˆ', 'v'].includes(rightTile)
-  ) {
-    isPlayerDead = true
-  }
-
-  playerVelocityX *= 0.9
-  playerVelocityY *= 0.82
+  playerVelocityX *= 0.8
+  playerVelocityY *= 0.8
 
   playerPositionX = playerNewPositionX
   playerPositionY = playerNewPositionY
@@ -175,12 +198,11 @@ const render = () => {
         canvas.context.fillStyle = '#cd33ff'
         canvas.context.fillRect(x, y, SIZE, SIZE)
         break;
-      case 'ˆ':
-        canvas.context.fillStyle = '#cd33ff'
+      case '^':
+      case 'v':
+        canvas.context.fillStyle = '#ff0000'
         canvas.context.fillRect(x, y, SIZE, SIZE)
 
-        canvas.context.fillStyle = '#ff0000'
-        canvas.context.fillRect(x, y, SIZE, SIZE / 2)
         break;
       case '$':
         canvas.context.fillStyle = '#ff33ff'
