@@ -65,8 +65,33 @@ const round = value => {
   return +value.toFixed(3)
 }
 
+const respawn = () => {
+  playerVelocityX = 0
+  playerVelocityY = 0
+
+  playerPositionX = 60
+  playerPositionY = 60
+
+  playerJumpCount = 0
+  isPlayerOnTheGround = false
+  isPlayerDead = false
+
+  gravity = 0
+  gravitySpeed = 0
+
+  accumulatedTime = 0
+}
+
 const update = elapsedTime => {
-  if (isPlayerDead) return
+  if (isPlayerDead) {
+    if (accumulatedTime < 500) {
+      accumulatedTime += elapsedTime
+
+      return
+    } else {
+      respawn()
+    }
+  }
 
   if (keyboard.isDown('ArrowLeft')) {
     playerVelocityX = playerJumpCount ? -3 : -3
@@ -130,6 +155,7 @@ const update = elapsedTime => {
 
     if (['^', 'v'].includes(topLeftTile) || ['^', 'v'].includes(bottomLeftTile)) {
       isPlayerDead = true
+      accumulatedTime = 0
     }
   } else { // Right
     topRightTile = getTile(playerNewPositionX + SIZE, playerPositionY)
@@ -142,6 +168,7 @@ const update = elapsedTime => {
 
     if (['^', 'v'].includes(topRightTile) || ['^', 'v'].includes(bottomRightTile)) {
       isPlayerDead = true
+      accumulatedTime = 0
     }
   }
 
@@ -156,6 +183,7 @@ const update = elapsedTime => {
 
     if (topLeftTile === 'v' || topRightTile === 'v') {
       isPlayerDead = true
+      accumulatedTime = 0
     }
   } else { // Down
     bottomLeftTile = getTile(playerPositionX + 1, playerNewPositionY + SIZE)
@@ -175,6 +203,7 @@ const update = elapsedTime => {
 
     if (bottomLeftTile === '^' || bottomRightTile === '^') {
       isPlayerDead = true
+      accumulatedTime = 0
     }
   }
 
