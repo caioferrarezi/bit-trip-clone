@@ -54,6 +54,12 @@ let gravitySpeed = 0
 
 let accumulatedTime = 0
 
+const randomColor = (colors = []) => {
+  const index = Math.floor(Math.random() * colors.length)
+
+  return colors[index]
+}
+
 const getTile = (x, y) => {
   x = Math.floor(x / SIZE)
   y = Math.floor(y / SIZE)
@@ -94,11 +100,11 @@ const update = elapsedTime => {
   }
 
   if (keyboard.isDown('ArrowLeft')) {
-    playerVelocityX = playerJumpCount ? -3 : -3
+    playerVelocityX = -3
   }
 
   if (keyboard.isDown('ArrowRight')) {
-    playerVelocityX = playerJumpCount ? 3 : 3
+    playerVelocityX = 3
   }
 
   if (keyboard.isHeld('Space')) {
@@ -142,54 +148,52 @@ const update = elapsedTime => {
   let playerNewPositionX = playerPositionX + round(playerVelocityX)
   let playerNewPositionY = playerPositionY + round(playerVelocityY)
 
-  let topLeftTile, topRightTile, bottomLeftTile, bottomRightTile
+  let firstTile, lastTile
 
   if (playerVelocityX < 0) { // Left
-    topLeftTile = getTile(playerNewPositionX, playerPositionY)
-    bottomLeftTile = getTile(playerNewPositionX, playerPositionY + SIZE)
+    // Gets tile from top left
+    firstTile = getTile(playerNewPositionX, playerPositionY)
+    // Gets tile from bottom left
+    lastTile = getTile(playerNewPositionX, playerPositionY + SIZE)
 
-    if (topLeftTile !== '.' || bottomLeftTile !== '.') {
+    if (firstTile !== '.' || lastTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) + SIZE
       playerVelocityX = 0
     }
-
-    if (['^', 'v'].includes(topLeftTile) || ['^', 'v'].includes(bottomLeftTile)) {
-      isPlayerDead = true
-      accumulatedTime = 0
-    }
   } else { // Right
-    topRightTile = getTile(playerNewPositionX + SIZE, playerPositionY)
-    bottomRightTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE - 1)
+    // Gets tile from top right
+    firstTile = getTile(playerNewPositionX + SIZE, playerPositionY)
+    // Gets tile from bottom right
+    lastTile = getTile(playerNewPositionX + SIZE, playerPositionY + SIZE - 1)
 
-    if (topRightTile !== '.' || bottomRightTile !== '.') {
+    if (firstTile !== '.' || lastTile !== '.') {
       playerNewPositionX = (Math.floor(playerNewPositionX / SIZE) * SIZE) - 0.01
       playerVelocityX = 0
     }
+  }
 
-    if (['^', 'v'].includes(topRightTile) || ['^', 'v'].includes(bottomRightTile)) {
-      isPlayerDead = true
-      accumulatedTime = 0
-    }
+  if (['^', 'v'].includes(firstTile) || ['^', 'v'].includes(lastTile)) {
+    isPlayerDead = true
+    accumulatedTime = 0
   }
 
   if (playerVelocityY < 0) { // Up
-    topLeftTile = getTile(playerPositionX + 1, playerNewPositionY)
-    topRightTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY)
+    // Gets tile from top left
+    firstTile = getTile(playerPositionX + 1, playerNewPositionY)
+    // Gets tile from top right
+    lastTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY)
 
-    if (topLeftTile !== '.' || topRightTile !== '.') {
+    if (firstTile !== '.' || lastTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) + SIZE
       playerVelocityY = 0
     }
-
-    if (topLeftTile === 'v' || topRightTile === 'v') {
-      isPlayerDead = true
-      accumulatedTime = 0
-    }
   } else { // Down
-    bottomLeftTile = getTile(playerPositionX + 1, playerNewPositionY + SIZE)
-    bottomRightTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY + SIZE)
+    // Gets tile from bottom left
+    firstTile = getTile(playerPositionX + 1, playerNewPositionY + SIZE)
+    // Gets tile from bottom right
+    lastTile = getTile(playerPositionX + SIZE - 1, playerNewPositionY + SIZE)
 
-    if (bottomLeftTile !== '.' || bottomRightTile !== '.') {
+    if (firstTile !== '.' || lastTile !== '.') {
       playerNewPositionY = (Math.floor(playerNewPositionY / SIZE) * SIZE) - 0.01
       playerVelocityY = 0
 
@@ -200,11 +204,11 @@ const update = elapsedTime => {
     } else {
       isPlayerOnTheGround = false
     }
+  }
 
-    if (bottomLeftTile === '^' || bottomRightTile === '^') {
-      isPlayerDead = true
-      accumulatedTime = 0
-    }
+  if (['^', 'v'].includes(firstTile) || ['^', 'v'].includes(lastTile)) {
+    isPlayerDead = true
+    accumulatedTime = 0
   }
 
   playerVelocityX *= 0.8
@@ -218,6 +222,10 @@ const render = () => {
   canvas.context.fillStyle = '#640063'
   canvas.context.fillRect(0, 0, WIDTH, HEIGHT)
 
+  const blockColor = randomColor([
+    '#ff0000', '#ffff00', '#ffffff'
+  ])
+
   for (let index in MAP) {
     let x = (index % COLUMNS) * SIZE
     let y = Math.floor(index / COLUMNS) * SIZE
@@ -229,7 +237,7 @@ const render = () => {
         break;
       case '^':
       case 'v':
-        canvas.context.fillStyle = '#ff0000'
+        canvas.context.fillStyle = blockColor
         canvas.context.fillRect(x, y, SIZE, SIZE)
 
         break;
