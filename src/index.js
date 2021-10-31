@@ -14,18 +14,18 @@ const MAP = createMap`
   ##################################
   ##################################
   ##################################
-  ####............vvvvvv........####
-  ####..........................####
-  ####..........................####
-  ####..........................####
-  ####............^^^^^^........####
-  #########################.....####
-  #########################.....####
-  ####..........................####
-  ####..........................####
-  ####..........................####
-  ####..........................####
-  ####.$..................^^^^^^####
+  ####...........vvvv.....vvvvvv####
+  ####.........................<####
+  ####.........................<####
+  ####.........................<####
+  ####...........^^^^..........<####
+  ##########################...<####
+  ##########################...<####
+  ####...........vvvv..........<####
+  ####.........................<####
+  ####.........................<####
+  ####.........................<####
+  ####.$.........^^^^.....^^^^^^####
   ##################################
   ##################################
   ##################################
@@ -144,11 +144,11 @@ const respawn = () => {
 const update = elapsedTime => {
   // Does nothing if the user is not playing
   // or if the player has won
-  if (!isUserPlaying || hasPlayerWon) return
+  if (!isUserPlaying) return
 
   // If the player is dead, it resets
   // the global state within 500 accumulated time
-  if (isPlayerDead) {
+  if (isPlayerDead || hasPlayerWon) {
     if (accumulatedTime < 500) {
       accumulatedTime += elapsedTime
 
@@ -160,12 +160,12 @@ const update = elapsedTime => {
 
   // Moves the player to the left
   if (keyboard.isDown('ArrowLeft')) {
-    playerVelocityX = -3
+    playerVelocityX = -2.5
   }
 
   // Moves the player to the right
   if (keyboard.isDown('ArrowRight')) {
-    playerVelocityX = 3
+    playerVelocityX = 2.5
   }
 
   // This verification is true when this
@@ -277,7 +277,7 @@ const update = elapsedTime => {
 
   // Player is dead when hitting
   // tiles with those patterns
-  if (['^', 'v'].includes(firstTile) || ['^', 'v'].includes(lastTile)) {
+  if (['^', 'v', '<'].includes(firstTile) || ['^', 'v', '<'].includes(lastTile)) {
     isPlayerDead = true
     accumulatedTime = 0
   }
@@ -346,7 +346,7 @@ const update = elapsedTime => {
 
   // Player is dead when hitting
   // tiles with those patterns
-  if (['^', 'v'].includes(firstTile) || ['^', 'v'].includes(lastTile)) {
+  if (['^', 'v', '<'].includes(firstTile) || ['^', 'v', '<'].includes(lastTile)) {
     isPlayerDead = true
     accumulatedTime = 0
   }
@@ -359,7 +359,7 @@ const update = elapsedTime => {
 
   // Adds some friction for the
   // next game loop iteration
-  playerVelocityX *= 0.8
+  playerVelocityX *= playerJumpCount > 0 ? 0.97 : 0.8
   playerVelocityY *= 0.8
 
   // Finally, updates the player X and Y position
@@ -370,45 +370,59 @@ const update = elapsedTime => {
 // Function responsible for rendering
 // the game on screen
 const render = () => {
-  // Always resets the canvas screen
-  canvas.context.fillStyle = '#640063'
-  canvas.context.fillRect(0, 0, WIDTH, HEIGHT)
+  if (isUserPlaying) {
+    // Always resets the canvas screen
+    canvas.context.fillStyle = '#640063'
+    canvas.context.fillRect(0, 0, WIDTH, HEIGHT)
 
-  // Gets the obstacle color
-  const obstacleColor = randomColor([
-    '#ff0000', '#ffff00', '#ffffff'
-  ])
+    // Gets the obstacle color
+    const obstacleColor = randomColor([
+      '#ff0000', '#ffff00', '#ffffff'
+    ])
 
-  // Iterates on the tile map
-  for (let index in MAP) {
-    // Gets the tile X and Y based on its index
-    let x = (index % COLUMNS) * SIZE
-    let y = Math.floor(index / COLUMNS) * SIZE
+    // Iterates on the tile map
+    for (let index in MAP) {
+      // Gets the tile X and Y based on its index
+      let x = (index % COLUMNS) * SIZE
+      let y = Math.floor(index / COLUMNS) * SIZE
 
-    switch(MAP[index]) {
-      // Renders the pink block
-      case '#':
-        canvas.context.fillStyle = '#cd33ff'
-        canvas.context.fillRect(x, y, SIZE, SIZE)
-        break;
-      // Renders the obstacles block
-      case '^':
-      case 'v':
-        canvas.context.fillStyle = obstacleColor
-        canvas.context.fillRect(x, y, SIZE, SIZE)
+      switch(MAP[index]) {
+        // Renders the pink block
+        case '#':
+          canvas.context.fillStyle = '#cd33ff'
+          canvas.context.fillRect(x, y, SIZE, SIZE)
+          break;
+        // Renders the obstacles block
+        case '^':
+        case 'v':
+        case '<':
+          canvas.context.fillStyle = obstacleColor
+          canvas.context.fillRect(x, y, SIZE, SIZE)
 
-        break;
-      // Renders the target block
-      case '$':
-        canvas.context.fillStyle = '#ff33ff'
-        canvas.context.fillRect(x, y, SIZE, SIZE)
-        break;
+          break;
+        // Renders the target block
+        case '$':
+          canvas.context.fillStyle = '#ff33ff'
+          canvas.context.fillRect(x, y, SIZE, SIZE)
+          break;
+      }
     }
-  }
 
-  // Renders the player
-  canvas.context.fillStyle = isPlayerDead ? '#ff0000' : '#000000'
-  canvas.context.fillRect(Math.round(playerPositionX), Math.round(playerPositionY), SIZE, SIZE)
+    // Renders the player
+    canvas.context.fillStyle = isPlayerDead ? '#ff0000' : '#000000'
+    canvas.context.fillRect(Math.round(playerPositionX), Math.round(playerPositionY), SIZE, SIZE)
+  } else {
+    canvas.context.fillStyle = '#cd33ff'
+    canvas.context.fillRect(0, 0, WIDTH, HEIGHT)
+
+    canvas.context.fillStyle = '#640063'
+    canvas.context.font = 'bold 12pt monospace'
+    canvas.context.textAlign = 'center'
+    canvas.context.textBaseline = 'middle'
+
+    canvas.context.fillText('BIT.TRIP RUNNER WARP ZONE CLONE', WIDTH / 2, HEIGHT / 2 - 15)
+    canvas.context.fillText('PRESS [ENTER] TO PLAY', WIDTH / 2, HEIGHT / 2 + 15)
+  }
 }
 
 keyboard.onKeyPress(key => {
@@ -420,10 +434,6 @@ keyboard.onKeyPress(key => {
       soundtrack.play()
         .then(() => isSoundtrackPlaying = true)
         .catch(() => isSoundtrackPlaying = false)
-    }
-
-    if (hasPlayerWon) {
-      respawn()
     }
 
     isUserPlaying = true
