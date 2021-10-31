@@ -17,6 +17,14 @@ module.exports = env => {
       },
       extensions: ['.js']
     },
+    module: {
+      rules: [{
+        test: /\.(mp3)$/,
+        use: [{
+          loader: 'file-loader'
+        }]
+      }]
+    },
     plugins: [
       new CleanWebpackPlugin(),
       new HtmlWebpackPlugin({
